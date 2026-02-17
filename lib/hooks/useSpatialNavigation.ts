@@ -80,16 +80,6 @@ export function useSpatialNavigation(enabled: boolean) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!enabled) return;
 
-    // Skip if target is input/textarea
-    const target = e.target as HTMLElement;
-    if (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.isContentEditable
-    ) {
-      return;
-    }
-
     const directionMap: Record<string, Direction> = {
       ArrowUp: 'up',
       ArrowDown: 'down',
@@ -98,6 +88,24 @@ export function useSpatialNavigation(enabled: boolean) {
     };
 
     const direction = directionMap[e.key];
+
+    // For input/textarea: allow Left/Right for cursor movement,
+    // but let Up/Down navigate spatially so the user can escape the input on TV.
+    // Skip if the event was already handled (e.g., by search history dropdown).
+    const target = e.target as HTMLElement;
+    const isInput = target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable;
+
+    if (isInput) {
+      if (!direction || direction === 'left' || direction === 'right') {
+        return;
+      }
+      // If a React handler already called preventDefault (e.g., dropdown navigation), skip
+      if (e.defaultPrevented) {
+        return;
+      }
+    }
 
     if (direction) {
       // Check if the focused element is inside a [data-no-spatial] container
